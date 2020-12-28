@@ -22,7 +22,7 @@ router.post('/register', async (req, res) =>{
     if(error) return res.status(400).json({message: error.details[0].message});
     // Step 2
     const userExist = await User.findOne({email: req.body.email});
-    if(userExist) return res.status(400).send("Email already exists.");
+    if(userExist) return res.status(400).json({message: 'Email already exists'});
     // Step 3
     const salt = await bcrypt.genSalt(10);
     const hashPassword = await bcrypt.hash(req.body.password, salt);
@@ -84,7 +84,7 @@ router.get('/me', verifyAuthToken, async (req, res) => {
     const userExist = await User.findOne({_id: req.user.user_id});
     if(!userExist) return res.status(429).json({message: 'Access Denied'});
     // Step 3
-    res.json({name: userExist.name, email: userExist.email});
+    res.json(userExist);
 })
 
 // generate New Auth-Token
@@ -93,10 +93,14 @@ router.get('/newAuthToken', verifyRefreshToken, async (req, res) =>{
     // 1. verification of refresh token will be done in middleware
     // 2. create a new auth token
     // 3. return auth token & refresh token
-
     const refreshToken = req.header('refresh-token');
+    const payload = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+
+    const tokenExist = await RefreshToken.findOne({token: refreshToken});
+    if(!tokenExist) res.status(401).json({message: 'Access denied'});
+    
     // Step 2
-    const authToken = jwt.sign({user_id : req.user.user_id}, process.env.TOKEN_SECRET, {expiresIn: '24h'});
+    const authToken = jwt.sign({user_id : payload.user_id}, process.env.TOKEN_SECRET, {expiresIn: '24h'});
     // Step 3
     res.header({'auth-token': authToken, 'refresh-token': refreshToken}).json({'auth-token': authToken, 'refresh-token': refreshToken});
 })

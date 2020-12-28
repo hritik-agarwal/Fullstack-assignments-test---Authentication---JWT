@@ -30,13 +30,9 @@ async function verifyRefreshToken (req, res, next) {
     const refreshToken = req.header('refresh-token');
     if(!refreshToken) res.status(401).json({message: 'Access denied'});
 
-    const tokenExist = await RefreshToken.findOne({token: refreshToken});
-    if(!tokenExist) res.status(401).json({message: 'Access denied'});
-
     // Step 2
     try{
         const payload = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
-        req.user = payload;
         next();
     } catch (error){
         return res.status(400).json({message: error.message});
